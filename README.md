@@ -72,7 +72,7 @@ org.apache.flume.sink:flume-http-sink:jar:0.0.1-SNAPSHOT
    \- org.apache.mina:mina-core:jar:2.0.4:compile
 ```
 
-
+修改将获取的消息传入钉钉接口实时报警
 
 License
 =======
