@@ -17,6 +17,7 @@ import org.apache.flume.EventDeliveryException;
 import org.apache.flume.Transaction;
 import org.apache.flume.conf.Configurable;
 import org.apache.log4j.Logger;
+import org.apache.flume.sink.AbstractSink;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -43,8 +44,8 @@ public class HttpSink extends AbstractSink implements Configurable {
 	}
 
 	public void configure(Context context) {
-		String wsEndpoint = context.getString("endpoint", "127.0.0.1");
-		String wsPort = context.getString("port", "8080");
+		String wsEndpoint = context.getString("endpoint", "http://commonapi.huizhuang.com/dingtalk/User/sendTextMsgByRobot.do");
+		String wsPort = context.getString("port", "80");
 		validateFullEndpoint(wsEndpoint, wsPort);
 
 		this.wsURL = wsEndpoint + ":" + wsPort;
@@ -70,20 +71,34 @@ public class HttpSink extends AbstractSink implements Configurable {
 
 	public Status process() throws EventDeliveryException {
 		Status status = null;
-
+		StringBuffer stringBuffer = new StringBuffer();
 		// Start transaction
 		Channel ch = getChannel();
 		Transaction txn = ch.getTransaction();
 		txn.begin();
 		try {
 			Event event = ch.take();
+			LOG.debug(event);
 			String message = URLEncoder.encode(new String(event.getBody()),
 					"UTF-8");
+			LOG.debug(message);
 			URL serverURL = new URL(this.wsURL);
+			LOG.debug(serverURL);
 			char[] jsonMessage = convertToJSON(message);
+			LOG.debug(jsonMessage);
+			stringBuffer
+			.append("hook")
+			.append("=")
+			.append(URLEncoder.encode("ac59f95548c74adeaf03d9fbb66a02657f87b578ad9bbce977018e8304623b75", "utf-8"))
+			.append("&")
+			.append("msg")
+			.append("=")
+			.append(message);
+			char[] mydata = stringBuffer.toString().toCharArray();
+			LOG.debug(mydata);
 			LOG.debug("New event ready: " + new String(jsonMessage) + " --> "
 					+ wsURL);
-
+//            if(message.contains("at")|message.contains("java.lang.NullPointerException")|message.contains("")){
 			HttpURLConnection connection = (HttpURLConnection) serverURL
 					.openConnection();
 			connection.setDoOutput(true);
@@ -91,13 +106,15 @@ public class HttpSink extends AbstractSink implements Configurable {
 			OutputStreamWriter wr = new OutputStreamWriter(
 					connection.getOutputStream());
 
-			wr.write(jsonMessage);
+			wr.write(mydata);
 			wr.flush();
 			connection.getInputStream();
 			connection.disconnect();
 			LOG.debug("message sucessfuly sent");
+//			}
 			txn.commit();
 			status = Status.READY;
+		
 		} catch (Throwable t) {
 			txn.rollback();
 
